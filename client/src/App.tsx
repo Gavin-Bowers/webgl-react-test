@@ -457,8 +457,10 @@ const SierpinskiPyramid: React.FC = () => {
           vertices.push(...b, ...d, ...c);
 
           // Add colors (one per vertex)
-          for (let i = 0; i < 12; i++) {
-            colors.push(Math.random(), Math.random(), Math.random());
+          for (let i = 0; i < 4; i++) {
+            const color = [Math.random(), Math.random(), Math.random()];
+            // Use the same color for all three vertices of the face
+            colors.push(...color, ...color, ...color);
           }
         } else {
           const ab = vec3.lerp(vec3.create(), a, b, 0.5);
