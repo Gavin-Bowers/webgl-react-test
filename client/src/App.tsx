@@ -3,16 +3,54 @@ import { mat4, vec3 } from 'gl-matrix';
 import './App.css'
 
 function App() {
-  // const [message, setMessage] = useState("");
+  const [artIndex, setArtIndex] = useState(0);
+
+  function handleLeftClick() {
+    setArtIndex((prevIndex) => {
+      const newIndex = prevIndex - 1;
+      return newIndex < 0 ? 2 : newIndex;
+    });
+  }
+  function handleRightClick() {
+    setArtIndex((prevIndex) => {
+      const newIndex = prevIndex + 1;
+      return newIndex > 2 ? 0 : newIndex;
+    });
+  }
 
   return (
     <>
-      <div className='art'>
-        <SpinningCube/>
-        <Icosahedron/>
-        <SierpinskiPyramid/>
+      <div className='art-viewer'>
+        {(() => {
+          switch (artIndex) {
+            case 0:
+              return <Cube/>;
+            case 1:
+              return <Icosahedron/>;
+            case 2:
+              return <SierpinskiPyramid/>;
+          }
+        })()}
+        <div className='art-viewer-controls'>
+          <ArtViewerLeft onClick={handleLeftClick}/>
+          <ArtViewerRight onClick={handleRightClick}/>
+          <p>{artIndex}</p>
+        </div>
       </div>
     </>
+  )
+}
+interface ArtViewerProps { //Apparently needed by TS
+  onClick: () => void;
+}
+const ArtViewerLeft: React.FC<ArtViewerProps> = ({onClick}) => {
+  return (
+    <button onClick={onClick}>Left</button>
+  )
+}
+const ArtViewerRight: React.FC<ArtViewerProps> = ({onClick}) => {
+  return (
+    <button onClick={onClick}>Right</button>
   )
 }
 
@@ -102,7 +140,7 @@ function createShaderProgram(
   return program;
 }
 
-const SpinningCube: React.FC = () => {
+const Cube: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {

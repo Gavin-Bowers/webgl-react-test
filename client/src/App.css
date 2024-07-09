@@ -4,3 +4,12 @@
   padding: 2rem;
   text-align: center; */
 }
+button {
+  font-size: 14pt;
+  padding: 5px;
+  margin: 5px;
+}
+
+.art-viewer-controls {
+  display: flex;
+}
