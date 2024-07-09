@@ -3,20 +3,10 @@ import { mat4, vec3 } from 'gl-matrix';
 import './App.css'
 
 function App() {
-  const [message, setMessage] = useState("");
+  // const [message, setMessage] = useState("");
 
   return (
     <>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={async () => {
-          let res = await fetch("http://localhost:3001/hello");
-          let obj = await res.json();
-          setMessage(obj.message);
-        }}>
-          server says: {message}
-        </button>
-      </div>
       <div className='art'>
         <SpinningCube/>
         <Icosahedron/>
@@ -487,7 +477,7 @@ const SierpinskiPyramid: React.FC = () => {
       return [vertices, colors];
     }
 
-    const [vertices, colors] = generateSierpinskiPyramid(3); // Adjust depth as needed
+    const [vertices, colors] = generateSierpinskiPyramid(5); // Adjust depth as needed
 
     // Create and bind vertex buffer
     const vertexBuffer = gl.createBuffer();
@@ -512,7 +502,7 @@ const SierpinskiPyramid: React.FC = () => {
     const modelViewMatrix = mat4.create();
 
     mat4.perspective(projectionMatrix, 25 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.1, 100.0);
-    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -5.0]);
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, -0.25, -4.0]);
 
     // Render loop
     const render = (time: number) => {
@@ -536,7 +526,7 @@ const SierpinskiPyramid: React.FC = () => {
       // Update model-view matrix for rotation
       const rotatedModelViewMatrix = mat4.create();
       mat4.copy(rotatedModelViewMatrix, modelViewMatrix);
-      mat4.rotate(rotatedModelViewMatrix, rotatedModelViewMatrix, time * 0.001, [0, 1, 0]);
+      mat4.rotate(rotatedModelViewMatrix, rotatedModelViewMatrix, time * 0.001, [0.3, 0.3, 0]);
 
       // Set uniforms
       gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
@@ -555,7 +545,7 @@ const SierpinskiPyramid: React.FC = () => {
     };
   }, []);
 
-  return <canvas ref={canvasRef} width={640} height={480} />;
+  return <canvas ref={canvasRef} width={1920} height={1080} />;
 };
 
 export default App
