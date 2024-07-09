@@ -5,6 +5,12 @@ import './App.css'
 function App() {
   const [artIndex, setArtIndex] = useState(0);
 
+  const slides = [
+    {name: 'Cube', component: <Cube key={0}/>},
+    {name: 'Icosahedron', component: <Icosahedron key={1}/>},
+    {name: 'Sierpinski Pyramid', component: <SierpinskiPyramid key={2}/>},
+  ];
+
   function handleLeftClick() {
     setArtIndex((prevIndex) => {
       const newIndex = prevIndex - 1;
@@ -21,21 +27,12 @@ function App() {
   return (
     <>
       <div className='art-viewer'>
-        {(() => {
-          switch (artIndex) {
-            case 0:
-              return <Cube/>;
-            case 1:
-              return <Icosahedron/>;
-            case 2:
-              return <SierpinskiPyramid/>;
-          }
-        })()}
         <div className='art-viewer-controls'>
           <ArtViewerLeft onClick={handleLeftClick}/>
+          <h3 className='art-title'>{slides[artIndex].name}</h3>
           <ArtViewerRight onClick={handleRightClick}/>
-          <p>{artIndex}</p>
         </div>
+        {slides[artIndex].component || <div>Invalid slide</div>}
       </div>
     </>
   )
@@ -45,12 +42,20 @@ interface ArtViewerProps { //Apparently needed by TS
 }
 const ArtViewerLeft: React.FC<ArtViewerProps> = ({onClick}) => {
   return (
-    <button onClick={onClick}>Left</button>
+    <button onClick={onClick}>
+      <span className="material-symbols-outlined">
+        chevron_left
+      </span>
+    </button>
   )
 }
 const ArtViewerRight: React.FC<ArtViewerProps> = ({onClick}) => {
   return (
-    <button onClick={onClick}>Right</button>
+    <button onClick={onClick}>
+      <span className="material-symbols-outlined">
+        chevron_right
+      </span>
+    </button>
   )
 }
 
@@ -203,33 +208,40 @@ const Cube: React.FC = () => {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
     const colorBuffer = gl.createBuffer();
+    const red = [0.9, 0.1, 0.1, 1.0];
+    const green = [0.1,  0.9,  0.1,  1.0];
+    const blue = [0.1,  0.1,  0.9,  1.0];
+    const yellow = [0.9,  0.9,  0.1,  1.0];
+    const purple = [0.9,  0.1,  0.9,  1.0];
+    const cyan = [0.1,  0.9,  0.9,  1.0];
+
     gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    const colors = [
-      1.0,  0.0,  0.0,  1.0,    // Front face: red
-      1.0,  0.0,  0.0,  1.0,
-      1.0,  0.0,  0.0,  1.0,
-      1.0,  0.0,  0.0,  1.0,
-      0.0,  1.0,  0.0,  1.0,    // Back face: green
-      0.0,  1.0,  0.0,  1.0,
-      0.0,  1.0,  0.0,  1.0,
-      0.0,  1.0,  0.0,  1.0,
-      0.0,  0.0,  1.0,  1.0,    // Top face: blue
-      0.0,  0.0,  1.0,  1.0,
-      0.0,  0.0,  1.0,  1.0,
-      0.0,  0.0,  1.0,  1.0,
-      1.0,  1.0,  0.0,  1.0,    // Bottom face: yellow
-      1.0,  1.0,  0.0,  1.0,
-      1.0,  1.0,  0.0,  1.0,
-      1.0,  1.0,  0.0,  1.0,
-      1.0,  0.0,  1.0,  1.0,    // Right face: purple
-      1.0,  0.0,  1.0,  1.0,
-      1.0,  0.0,  1.0,  1.0,
-      1.0,  0.0,  1.0,  1.0,
-      0.0,  1.0,  1.0,  1.0,    // Left face: cyan
-      0.0,  1.0,  1.0,  1.0,
-      0.0,  1.0,  1.0,  1.0,
-      0.0,  1.0,  1.0,  1.0,
-    ];
+    var colors = [];
+    colors.push(...red);
+    colors.push(...red);
+    colors.push(...red);
+    colors.push(...red);
+    colors.push(...green);
+    colors.push(...green);
+    colors.push(...green);
+    colors.push(...green);
+    colors.push(...blue);
+    colors.push(...blue);
+    colors.push(...blue);
+    colors.push(...blue);
+    colors.push(...yellow);
+    colors.push(...yellow);
+    colors.push(...yellow);
+    colors.push(...yellow);
+    colors.push(...purple);
+    colors.push(...purple);
+    colors.push(...purple);
+    colors.push(...purple);
+    colors.push(...cyan);
+    colors.push(...cyan);
+    colors.push(...cyan);
+    colors.push(...cyan);
+    
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
     const indexBuffer = gl.createBuffer();
@@ -278,7 +290,7 @@ const Cube: React.FC = () => {
 
       const newModelViewMatrix = mat4.create();
       mat4.translate(newModelViewMatrix, newModelViewMatrix, [0.0, 0.0, -6.0]);
-      mat4.rotate(newModelViewMatrix, newModelViewMatrix, rotation, [0, 1, 0]);
+      mat4.rotate(newModelViewMatrix, newModelViewMatrix, rotation, [-1, 1, 0]);
 
       gl.useProgram(program);
       gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
@@ -292,7 +304,6 @@ const Cube: React.FC = () => {
 
     // Cleanup function
     return () => {
-      // Not needed as it always renders
     };
   }, []);
 
@@ -540,7 +551,7 @@ const SierpinskiPyramid: React.FC = () => {
     const modelViewMatrix = mat4.create();
 
     mat4.perspective(projectionMatrix, 25 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.1, 100.0);
-    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, -0.25, -4.0]);
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, -0.0, -4.5]);
 
     // Render loop
     const render = (time: number) => {
@@ -583,7 +594,7 @@ const SierpinskiPyramid: React.FC = () => {
     };
   }, []);
 
-  return <canvas ref={canvasRef} width={1920} height={1080} />;
+  return <canvas ref={canvasRef} width={640} height={480}/>;
 };
 
 export default App
