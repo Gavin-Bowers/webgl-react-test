@@ -335,7 +335,7 @@ const Icosahedron: React.FC = () => {
       [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
       [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
       [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
-    ];
+    ];//.map(v => vec3.normalize(vec3.create(), v as vec3) as [number, number, number]);
 
     const indices = [
       0, 11, 5,    0, 5, 1,    0, 1, 7,    0, 7, 10,   0, 10, 11,
@@ -343,46 +343,97 @@ const Icosahedron: React.FC = () => {
       3, 9, 4,     3, 4, 2,    3, 2, 6,    3, 6, 8,    3, 8, 9,
       4, 9, 5,     2, 4, 11,   6, 2, 10,   8, 6, 7,    9, 8, 1
     ];
+// Calculate face centers and determine color based on position
+const faceColors = [];
+for (let i = 0; i < indices.length; i += 3) {
+  const v1 = vertices[indices[i]];
+  const v2 = vertices[indices[i + 1]];
+  const v3 = vertices[indices[i + 2]];
+  
+  // Calculate face center
+  const center = vec3.fromValues(
+    (v1[0] + v2[0] + v3[0]) / 3,
+    (v1[1] + v2[1] + v3[1]) / 3,
+    (v1[2] + v2[2] + v3[2]) / 3
+  );
+  
+  // Normalize center to get a value between -1 and 1
+  vec3.normalize(center, center);
+  
+  // Map the x-coordinate to a hue
+  const h = (center[0] + 1 + center[1] + 1) / 4; // Map [-1, 1] to [0, 1]
+  const s = 1.0;
+  const v = 1.0;
+
+  // Hue to RGB conversion
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h * 6) % 2) - 1));
+  const m = v - c;
+
+  var r1 = 0.0, g1 = 0.0, b1 = 0.0;
+
+  if (0 <= h && h < 1/6) {
+    [r1, g1, b1] = [c, x, 0];
+
+  } else if (1/6 <= h && h < 2/6) {
+    [r1, g1, b1] = [x, c, 0];
+
+  } else if (2/6 <= h && h < 3/6) {
+    [r1, g1, b1] = [0, c, x];
+
+  } else if (3/6 <= h && h < 4/6) {
+    [r1, g1, b1] = [0, x, c];
+
+  } else if (4/6 <= h && h < 5/6) {
+    [r1, g1, b1] = [x, 0, c];
+
+  } else {
+    [r1, g1, b1] = [c, 0, x];
+  }
+
+  const r = r1 + m;
+  const g = g1 + m;
+  const b = b1 + m;
+  
+  faceColors.push([r, g, b, 1.0]);
+}
+
+// Create a new array of vertices that includes color data
+const coloredVertices = [];
+const coloredIndices = [];
+
+for (let i = 0; i < indices.length; i += 3) {
+  const faceColor = faceColors[i / 3];
+  for (let j = 0; j < 3; j++) {
+    const vertexIndex = indices[i + j];
+    coloredVertices.push(
+      ...vertices[vertexIndex],
+      ...faceColor
+    );
+    coloredIndices.push(coloredVertices.length / 7 - 1);
+  }
+}
 
     // Flatten vertices array
-    const positionArray = new Float32Array(vertices.flat());
+    const positionColorArray = new Float32Array(coloredVertices);
 
-    // Create position buffer
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positionArray, gl.STATIC_DRAW);
-
-    // Create color data (one color per vertex)
-    const colorData = new Float32Array(vertices.length * 4);
-    for (let i = 0; i < vertices.length; i++) {
-      const r = Math.random();
-      const g = Math.random();
-      const b = Math.random();
-      colorData[i * 4] = r;
-      colorData[i * 4 + 1] = g;
-      colorData[i * 4 + 2] = b;
-      colorData[i * 4 + 3] = 1.0; // Alpha
-    }
-
-    // Create color buffer
-    const colorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.STATIC_DRAW);
+    // Create position and color buffer
+    const positionColorBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionColorBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, positionColorArray, gl.STATIC_DRAW);
 
     // Create index buffer
     const indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(coloredIndices), gl.STATIC_DRAW);
 
     // Set up attribute pointers
     const positionAttributeLocation = gl.getAttribLocation(program, 'aVertexPosition');
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 0);
     gl.enableVertexAttribArray(positionAttributeLocation);
 
     const colorAttributeLocation = gl.getAttribLocation(program, 'aVertexColor');
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.vertexAttribPointer(colorAttributeLocation, 4, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(colorAttributeLocation, 4, gl.FLOAT, false, 7 * Float32Array.BYTES_PER_ELEMENT, 3 * Float32Array.BYTES_PER_ELEMENT);
     gl.enableVertexAttribArray(colorAttributeLocation);
 
     // Set up matrices (similar to before)
@@ -495,7 +546,7 @@ const SierpinskiPyramid: React.FC = () => {
           vertices.push(...a, ...d, ...b);
           vertices.push(...b, ...d, ...c);
 
-          // Add colors (one per vertex)
+          // Add colors
           for (let i = 0; i < 4; i++) {
             const color = [Math.random(), Math.random(), Math.random()];
             // Use the same color for all three vertices of the face
@@ -551,7 +602,7 @@ const SierpinskiPyramid: React.FC = () => {
     const modelViewMatrix = mat4.create();
 
     mat4.perspective(projectionMatrix, 25 * Math.PI / 180, gl.canvas.width / gl.canvas.height, 0.1, 100.0);
-    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, -0.0, -4.5]);
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -4.6]);
 
     // Render loop
     const render = (time: number) => {
