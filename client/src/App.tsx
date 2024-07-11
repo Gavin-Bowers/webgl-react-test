@@ -1,26 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, vec3, vec4 } from 'gl-matrix';
 import './App.css'
 
 function App() {
   const [artIndex, setArtIndex] = useState(0);
 
   const slides = [
-    {name: 'Cube', component: <Cube key={0}/>},
-    {name: 'Icosahedron', component: <Icosahedron key={1}/>},
-    {name: 'Sierpinski Pyramid', component: <SierpinskiPyramid key={2}/>},
+    {name: 'Cube', 
+    component: <Cube/>, 
+    controls:<></>},
+    {name: 'Icosahedron',
+    component: <Icosahedron/>, 
+    controls:<></>},
+    {name: 'Sierpinski Pyramid', 
+    component: <SierpinskiPyramid/>, 
+    controls:<></>},
+    {name: 'Tesseract', 
+    component: <Tesseract/>, 
+    controls:<></>},
   ];
 
   function handleLeftClick() {
     setArtIndex((prevIndex) => {
       const newIndex = prevIndex - 1;
-      return newIndex < 0 ? 2 : newIndex;
+      return newIndex < 0 ? slides.length - 1 : newIndex;
     });
   }
   function handleRightClick() {
     setArtIndex((prevIndex) => {
       const newIndex = prevIndex + 1;
-      return newIndex > 2 ? 0 : newIndex;
+      return newIndex > slides.length - 1 ? 0 : newIndex;
     });
   }
 
@@ -33,6 +42,7 @@ function App() {
           <ArtViewerRight onClick={handleRightClick}/>
         </div>
         {slides[artIndex].component || <div>Invalid slide</div>}
+        {slides[artIndex].controls || <></>}
       </div>
     </>
   )
@@ -362,8 +372,8 @@ for (let i = 0; i < indices.length; i += 3) {
   
   // Map the x-coordinate to a hue
   const h = (center[0] + 1 + center[1] + 1) / 4; // Map [-1, 1] to [0, 1]
-  const s = 1.0;
-  const v = 1.0;
+  const s = 0.9;
+  const v = 0.9;
 
   // Hue to RGB conversion
   const c = v * s;
@@ -647,5 +657,192 @@ const SierpinskiPyramid: React.FC = () => {
 
   return <canvas ref={canvasRef} width={640} height={480}/>;
 };
+
+const vertexShaderSource4D = `#version 300 es
+  in vec4 aVertexPosition;
+  
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+  
+  void main() {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  }
+`;
+
+const fragmentShaderSource4D = `#version 300 es
+  precision mediump float;
+  out vec4 outColor;
+  
+  void main() {
+    outColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }
+`;
+
+const Tesseract: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const gl = canvas.getContext('webgl2');
+    if (!gl) {
+      console.error('WebGL 2 not supported');
+      return;
+    }
+
+    const program = createShaderProgram(gl, vertexShaderSource4D, fragmentShaderSource4D);
+    if (!program) {
+      console.error('Failed to create shader program');
+      return;
+    }
+
+    // Get attribute and uniform locations
+    const positionAttributeLocation = gl.getAttribLocation(program, 'aVertexPosition');
+    const projectionMatrixLocation = gl.getUniformLocation(program, 'uProjectionMatrix');
+    const modelViewMatrixLocation = gl.getUniformLocation(program, 'uModelViewMatrix');
+
+    // Create buffers
+    const positionBuffer = gl.createBuffer();
+    const indexBuffer = gl.createBuffer();
+
+    // Set up matrices
+    const fieldOfView = 45 * Math.PI / 180;
+    const aspect = gl.canvas.width / gl.canvas.height;
+    const zNear = 0.1;
+    const zFar = 100.0;
+    const projectionMatrix = mat4.create();
+    mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
+
+    const modelViewMatrix = mat4.create();
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0.0, 0.0, -15.0]);
+
+    // Generate 4D hypercube vertices
+    const generateHypercubeVertices = () => {
+      const vertices = [];
+      for (let x = -1; x <= 1; x += 2) {
+        for (let y = -1; y <= 1; y += 2) {
+          for (let z = -1; z <= 1; z += 2) {
+            for (let w = -1; w <= 1; w += 2) {
+              vertices.push([x, y, z, w]);
+            }
+          }
+        }
+      }
+      return vertices;
+    };
+
+    const hypercubeVertices = generateHypercubeVertices();
+
+    // Generate edges (connections between vertices)
+    const generateHypercubeEdges = () => {
+      const edges = [];
+      for (let i = 0; i < hypercubeVertices.length; i++) {
+        for (let j = i + 1; j < hypercubeVertices.length; j++) {
+          let diffCount = 0;
+          for (let k = 0; k < 4; k++) {
+            if (hypercubeVertices[i][k] !== hypercubeVertices[j][k]) {
+              diffCount++;
+            }
+          }
+          if (diffCount === 1) {
+            edges.push(i, j);
+          }
+        }
+      }
+      return edges;
+    };
+
+    const hypercubeEdges = generateHypercubeEdges();
+
+    // Rotation matrices in 4D
+    const rotateXY = (angle: number): mat4 => {
+      return mat4.fromValues(
+        Math.cos(angle), -Math.sin(angle), 0, 0,
+        Math.sin(angle), Math.cos(angle), 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+      );
+    };
+    
+    const rotateXZ = (angle: number): mat4 => {
+      return mat4.fromValues(
+        Math.cos(angle), 0, -Math.sin(angle), 0,
+        0, 1, 0, 0,
+        Math.sin(angle), 0, Math.cos(angle), 0,
+        0, 0, 0, 1,
+      );
+    };
+    
+    const rotateXW = (angle: number): mat4 => {
+      return mat4.fromValues(
+        Math.cos(angle), 0, 0, -Math.sin(angle),
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        Math.sin(angle), 0, 0, Math.cos(angle),
+      );
+    };
+
+    // Animation loop
+    const render = (time: number) => {
+      time *= 0.001;  // convert to seconds
+    
+      const rotatedVertices = hypercubeVertices.map(v => {
+        let rotated = vec4.fromValues(v[0], v[1], v[2], v[3]);
+        vec4.transformMat4(rotated, rotated, rotateXY(time * 0.5));
+        vec4.transformMat4(rotated, rotated, rotateXZ(time * 0.3));
+        vec4.transformMat4(rotated, rotated, rotateXW(time * 0.2));
+        return rotated;
+      });
+
+      // Project 4D to 3D (simple perspective projection)
+      const projected3D = rotatedVertices.map(v => {
+        const w = 2 / (2 + v[3]); // Perspective divide
+        return [v[0] * w, v[1] * w, v[2] * w];
+      });
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(projected3D.flat()), gl.DYNAMIC_DRAW);
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(hypercubeEdges), gl.STATIC_DRAW);
+
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      gl.useProgram(program);
+      gl.uniformMatrix4fv(projectionMatrixLocation, false, projectionMatrix);
+      gl.uniformMatrix4fv(modelViewMatrixLocation, false, modelViewMatrix);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.vertexAttribPointer(positionAttributeLocation, 3, gl.FLOAT, false, 0, 0);
+      gl.enableVertexAttribArray(positionAttributeLocation);
+
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+      gl.drawElements(gl.LINES, hypercubeEdges.length, gl.UNSIGNED_SHORT, 0);
+
+      requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
+
+    // Cleanup function
+    return () => {
+      gl.deleteProgram(program);
+      gl.deleteBuffer(positionBuffer);
+      gl.deleteBuffer(indexBuffer);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} width={640} height={480} />;
+};
+
+const TesseractControls = () => {
+  return (
+    <div className='bottom-controls'>
+    
+    </div>
+  );
+}
 
 export default App
