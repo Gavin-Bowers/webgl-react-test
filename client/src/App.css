@@ -78,3 +78,8 @@ h3 {
   width: 300px;
   text-align: center;
 }
+
+#tesseract-controls {
+  display: flex;
+  justify-content: space-between;
+}
