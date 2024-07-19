@@ -18,7 +18,7 @@ function App() {
   const slides = [
     {
       name: 'Cube',
-      component: <TexturedCube />,
+      component: <Cube />,
     },
     {
       name: 'Icosahedron',
@@ -787,7 +787,7 @@ const Tesseract: React.FC = () => {
       // Project 4D to 3D (simple perspective projection)
       const projected3D = rotatedVertices.map(v => {
         const w = 2 / (2 + v[3]); // Perspective divide
-        return [v[0] * w, v[1] * w, v[2] * w];
+        return [v[1] * w, v[0] * w, v[2] * w];
       });
 
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
